@@ -18,7 +18,7 @@ exports.requestImpl = module => request => aC => xC => () => {
 		{
 			method: request.method,
 			headers: request.headers,
-			timeout: request.timeout ? request.timeout : undefined,
+			timeout: request.timeout,
 		},
 		res => {
 			res.on(`error`, xC);

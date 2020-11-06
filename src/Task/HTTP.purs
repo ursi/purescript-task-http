@@ -20,7 +20,7 @@ import MasonPrelude
 import Data.Argonaut (class DecodeJson, decodeJson, jsonParser)
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Nullable (Nullable, toNullable)
+import Data.Undefinable (Undefinable, toUndefinable)
 import Foreign.Object (Object)
 import Foreign.Object as FO
 import Node.Buffer.Immutable (ImmutableBuffer)
@@ -102,7 +102,7 @@ foreign import requestImpl ::
   , method :: String
   , headers :: Object String
   , body :: Buffer
-  , timeout :: Nullable Int
+  , timeout :: Undefinable Int
   } ->
   ForeignCallback
     { body :: Buffer
@@ -135,7 +135,7 @@ request r fromBuffer = case getModule r.url of
           , method: show r.method
           , headers: FO.fromFoldable r.headers
           , body: toBuffer r.body
-          , timeout: toNullable r.timeout
+          , timeout: toUndefinable r.timeout
           }
       )
       >>= \res@{ status, headers } ->

@@ -4,9 +4,9 @@
   , "foreign-object"
   , "mason-prelude"
   , "node-buffer"
-  , "nullable"
   , "ordered-collections"
   , "task"
+  , "undefinable"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
