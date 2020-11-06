@@ -1,9 +1,13 @@
 module Task.HTTP
   ( class IsBody
   , toBuffer
-  , Method
-  , Error
+  , Method(..)
+  , Error(..)
   , Buffer
+  , Request
+  , defaultRequest
+  , Response
+  , Status
   , request
   , getJson
   , getString
