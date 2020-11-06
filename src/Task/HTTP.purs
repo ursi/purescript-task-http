@@ -9,6 +9,7 @@ module Task.HTTP
   , Response
   , Status
   , request
+  , URL
   , getJson
   , getString
   , json
@@ -178,12 +179,15 @@ defaultRequest =
   , timeout: Nothing
   }
 
-getJson :: ∀ a. DecodeJson a => String -> Task Error a
+type URL
+  = String
+
+getJson :: ∀ a. DecodeJson a => URL -> Task Error a
 getJson url =
   request (defaultRequest { url = url }) json
     <#> _.body
 
-getString :: String -> Task Error String
+getString :: URL -> Task Error String
 getString url =
   request (defaultRequest { url = url }) string
     <#> _.body
