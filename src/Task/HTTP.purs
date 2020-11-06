@@ -56,6 +56,11 @@ data Error
   | BadStatus Status
   | BadURL String
 
+derive instance genericError :: Generic Error _
+
+instance showError :: Show Error where
+  show = genericShow
+
 type Buffer
   = ImmutableBuffer
 
