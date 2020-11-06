@@ -11,13 +11,12 @@ module Task.HTTP
   , request
   , getJson
   , getString
-  , decodeJson
+  , json
   , string
   ) where
 
 import MasonPrelude
-import Data.Argonaut (class DecodeJson)
-import Data.Argonaut as A
+import Data.Argonaut (class DecodeJson, decodeJson, jsonParser)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Nullable (Nullable, toNullable)
@@ -152,13 +151,13 @@ request r fromBuffer = case getModule r.url of
 badStatus :: Int -> Boolean
 badStatus _ = false
 
-decodeJson :: ∀ a. DecodeJson a => Buffer -> String \/ a
-decodeJson =
+json :: ∀ a. DecodeJson a => Buffer -> String \/ a
+json =
   B.toString UTF8
-    .> A.jsonParser
+    .> jsonParser
     .> case _ of
-        Right json ->
-          A.decodeJson json
+        Right json' ->
+          decodeJson json'
             # lmap show
         Left error -> Left error
 
@@ -176,7 +175,7 @@ defaultRequest =
 
 getJson :: ∀ a. DecodeJson a => String -> Task Error a
 getJson url =
-  request (defaultRequest { url = url }) decodeJson
+  request (defaultRequest { url = url }) json
     <#> _.body
 
 getString :: String -> Task Error String
