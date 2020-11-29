@@ -7,6 +7,7 @@
   , "ordered-collections"
   , "task"
   , "undefinable"
+  , "web-file"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
