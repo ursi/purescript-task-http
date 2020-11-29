@@ -1,13 +1,9 @@
-module Task.HTTP
-  ( class IsBody
+module Task.Node.HTTP
+  ( module Task.HTTP.Types
+  , class IsBody
   , toBuffer
-  , Method(..)
-  , Error(..)
   , Buffer
-  , Request
   , defaultRequest
-  , Response
-  , Status
   , request
   , URL
   , getJson
@@ -17,8 +13,8 @@ module Task.HTTP
   ) where
 
 import MasonPrelude
-import Data.Argonaut (class DecodeJson, decodeJson, jsonParser)
-import Data.Map (Map)
+import Data.Argonaut (class DecodeJson, Json, decodeJson, jsonParser)
+import Data.Argonaut as Argonaut
 import Data.Map as Map
 import Data.Undefinable (Undefinable, toUndefinable)
 import Foreign.Object (Object)
@@ -28,6 +24,7 @@ import Node.Buffer.Immutable as B
 import Node.Encoding (Encoding(UTF8))
 import Task (Canceler, ForeignCallback, Task, lmap, throwError)
 import Task as Task
+import Task.HTTP.Types (Error(..), Method(..), Request, Response, Status)
 
 foreign import data Module :: Type
 
@@ -36,31 +33,6 @@ foreign import http :: Module
 foreign import https :: Module
 
 foreign import protocolImpl :: (∀ a. Maybe a) -> (∀ a. a -> Maybe a) -> String -> Maybe String
-
-data Method
-  = GET
-  | HEAD
-  | POST
-  | PUT
-  | DELETE
-  | CONNECT
-  | OPTIONS
-  | TRACE
-
-derive instance genericMethod :: Generic Method _
-
-instance showMethod :: Show Method where
-  show = genericShow
-
-data Error
-  = BadBody String
-  | BadStatus Status
-  | BadURL String
-
-derive instance genericError :: Generic Error _
-
-instance showError :: Show Error where
-  show = genericShow
 
 type Buffer
   = ImmutableBuffer
@@ -73,14 +45,6 @@ getModule url =
         "http:" -> Just http
         _ -> Nothing
 
-type Request a
-  = { url :: String
-    , method :: Method
-    , headers :: Array (String /\ String)
-    , body :: a
-    , timeout :: Maybe Int
-    }
-
 class IsBody a where
   toBuffer :: a -> Buffer
 
@@ -89,6 +53,9 @@ instance isBodyUnit :: IsBody Unit where
 
 instance isBodyString :: IsBody String where
   toBuffer = B.fromString ~$ UTF8
+
+instance isBodyJson :: IsBody Json where
+  toBuffer = Argonaut.stringify .> (B.fromString ~$ UTF8)
 
 instance isBodyArray :: IsBody (Array Int) where
   toBuffer = B.fromArray
@@ -112,20 +79,12 @@ foreign import requestImpl ::
   ForeignCallback Error ->
   Effect Canceler
 
-type Response a
-  = { body :: a
-    , status :: Status
-    , headers :: Map String String
-    }
-
-type Status
-  = { code :: Int, message :: String }
-
 request ::
   ∀ a b.
   IsBody a =>
   Request a ->
-  (Buffer -> String \/ b) -> Task Error (Response b)
+  (Buffer -> String \/ b) ->
+  Task Error (Response b)
 request r fromBuffer = case getModule r.url of
   Just m ->
     Task.fromForeign
