@@ -1,6 +1,8 @@
 exports.requestImpl = request => aC => xC => () => {
 	fetch(request.url, {
-		headers: request.headers
+		body: request.body.size === 0 ? undefined : request.body,
+		headers: request.headers,
+		method: request.method,
 	}).then(res => {
 		const headers = {};
 
