@@ -39,6 +39,12 @@ instance isBodyString :: IsBody String where
 instance isBodyJson :: IsBody Json where
   toBlob = Argonaut.stringify .> (Blob.fromString ~$ applicationJSON)
 
+type RawResponse
+  = { body :: Blob
+    , status :: Status
+    , headers :: Object String
+    }
+
 foreign import requestImpl ::
   { url :: String
   , method :: String
@@ -46,13 +52,23 @@ foreign import requestImpl ::
   , body :: Blob
   , timeout :: Undefinable Int
   } ->
-  ForeignCallback
-    { body :: Blob
-    , status :: Status
-    , headers :: Object String
-    } ->
+  ForeignCallback RawResponse ->
   ForeignCallback Error ->
   Effect Canceler
+
+toResponse :: ∀ a x. (Blob -> Task x a) -> RawResponse -> Task x (Response a)
+toResponse fromBlob rawRes@{ body, headers } = do
+  fromBlob body
+    >>= ( \b ->
+          pure
+            $ rawRes
+                { body = b
+                , headers =
+                  headers
+                    # FO.toArrayWithKey Tuple
+                    # Map.fromFoldable
+                }
+      )
 
 request ::
   ∀ a b.
@@ -61,33 +77,24 @@ request ::
   (Blob -> Task String b) ->
   Task Error (Response b)
 request r fromBlob =
-  Task.fromForeign
-    ( requestImpl
-        { url: r.url
-        , method: show r.method
-        , headers: FO.fromFoldable r.headers
-        , body: toBlob r.body
-        , timeout: toUndefinable r.timeout
-        }
-    )
-    >>= \res@{ status, headers } ->
-        if badStatus status.code then
-          throwError $ BadStatus status
+  ( Task.fromForeign
+      $ requestImpl
+          { url: r.url
+          , method: show r.method
+          , headers: FO.fromFoldable r.headers
+          , body: toBlob r.body
+          , timeout: toUndefinable r.timeout
+          }
+  )
+    >>= \rawRes@{ status } ->
+        if badStatus status.code then do
+          strRes <- toResponse TaskBlob.text rawRes
+          throwError $ BadStatus strRes
         else
-          fromBlob res.body
-            >>= ( \b ->
-                  pure
-                    $ res
-                        { body = b
-                        , headers =
-                          headers
-                            # FO.toArrayWithKey Tuple
-                            # Map.fromFoldable
-                        }
-              )
-            >>! throwError
-            <. BadBody
-
+          toResponse fromBlob rawRes
+            >>! \e -> do
+                strRes <- toResponse TaskBlob.text rawRes
+                throwError $ BadBody e strRes
 
 json :: ∀ a. DecodeJson a => Blob -> Task String a
 json blob = do

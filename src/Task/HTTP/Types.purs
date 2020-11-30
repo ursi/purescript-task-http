@@ -4,8 +4,8 @@ import MasonPrelude
 import Data.Map (Map)
 
 data Error
-  = BadBody String
-  | BadStatus Status
+  = BadBody String (Response String)
+  | BadStatus (Response String)
   | BadURL String
 
 derive instance genericError :: Generic Error _

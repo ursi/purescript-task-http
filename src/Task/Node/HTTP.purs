@@ -64,6 +64,12 @@ instance isBodyArray :: IsBody (Array Int) where
 instance isBodyImmutableBuffer :: IsBody ImmutableBuffer where
   toBuffer = identity
 
+type RawResponse
+  = { body :: Buffer
+    , status :: Status
+    , headers :: Object String
+    }
+
 foreign import requestImpl ::
   Module ->
   { url :: String
@@ -72,13 +78,26 @@ foreign import requestImpl ::
   , body :: Buffer
   , timeout :: Undefinable Int
   } ->
-  ForeignCallback
-    { body :: Buffer
-    , status :: Status
-    , headers :: Object String
-    } ->
+  ForeignCallback RawResponse ->
   ForeignCallback Error ->
   Effect Canceler
+
+toResponse :: ∀ a x. (Buffer -> x \/ a) -> RawResponse -> x \/ Response a
+toResponse fromBuffer rawRes@{ body, headers } = do
+  fromBuffer body
+    <#> \b ->
+        rawRes
+          { body = b
+          , headers =
+            headers
+              # FO.toArrayWithKey Tuple
+              # Map.fromFoldable
+          }
+
+toStringRes :: RawResponse -> Response String
+toStringRes rawRes = case toResponse (Right <. B.toString UTF8) rawRes of
+  Right strRes -> strRes
+  Left a -> absurd a
 
 request ::
   ∀ a b.
@@ -98,20 +117,14 @@ request r fromBuffer = case getModule r.url of
           , timeout: toUndefinable r.timeout
           }
       )
-      >>= \res@{ status, headers } ->
+      >>= \rawRes@{ status } ->
           if badStatus status.code then
-            throwError $ BadStatus status
-          else case fromBuffer res.body of
-            Right b ->
-              pure
-                $ res
-                    { body = b
-                    , headers =
-                      headers
-                        # FO.toArrayWithKey Tuple
-                        # Map.fromFoldable
-                    }
-            Left error -> throwError $ BadBody error
+            throwError $ BadStatus $ toStringRes rawRes
+          else
+            Task.liftEither
+              $ lmap
+                  (\error -> BadBody error $ toStringRes rawRes)
+                  (toResponse fromBuffer rawRes)
   Nothing -> throwError $ BadURL r.url
 
 json :: ∀ a. DecodeJson a => Buffer -> String \/ a
