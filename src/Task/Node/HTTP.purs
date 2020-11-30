@@ -24,6 +24,7 @@ import Node.Buffer.Immutable as B
 import Node.Encoding (Encoding(UTF8))
 import Task (Canceler, ForeignCallback, Task, lmap, throwError)
 import Task as Task
+import Task.HTTP.Internal (badStatus)
 import Task.HTTP.Types (Error(..), Method(..), Request, Response, Status)
 
 foreign import data Module :: Type
@@ -112,9 +113,6 @@ request r fromBuffer = case getModule r.url of
                     }
             Left error -> throwError $ BadBody error
   Nothing -> throwError $ BadURL r.url
-
-badStatus :: Int -> Boolean
-badStatus _ = false
 
 json :: ∀ a. DecodeJson a => Buffer -> String \/ a
 json =

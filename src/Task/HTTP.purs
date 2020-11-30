@@ -22,6 +22,7 @@ import Foreign.Object as FO
 import Task (Canceler, ForeignCallback, Task, (>>!), lmap, throwError)
 import Task as Task
 import Task.HTTP.Blob as TaskBlob
+import Task.HTTP.Internal (badStatus)
 import Task.HTTP.Types (Error(..), Method(..), Request, Response, Status)
 import Web.File.Blob (Blob)
 import Web.File.Blob as Blob
@@ -87,8 +88,6 @@ request r fromBlob =
             >>! throwError
             <. BadBody
 
-badStatus :: Int -> Boolean
-badStatus _ = false
 
 json :: ∀ a. DecodeJson a => Blob -> Task String a
 json blob = do
