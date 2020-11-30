@@ -39,6 +39,9 @@ instance isBodyString :: IsBody String where
 instance isBodyJson :: IsBody Json where
   toBlob = Argonaut.stringify .> (Blob.fromString ~$ applicationJSON)
 
+instance isBodyBlob :: IsBody Blob where
+  toBlob = identity
+
 type RawResponse
   = { body :: Blob
     , status :: Status
