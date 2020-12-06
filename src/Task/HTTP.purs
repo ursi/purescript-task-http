@@ -12,7 +12,14 @@ module Task.HTTP
   ) where
 
 import MasonPrelude
-import Data.Argonaut (class DecodeJson, Json, decodeJson, jsonParser)
+import Data.Argonaut
+  ( class DecodeJson
+  , class EncodeJson
+  , Json
+  , decodeJson
+  , encodeJson
+  , jsonParser
+  )
 import Data.Argonaut as Argonaut
 import Data.Map as Map
 import Data.MediaType.Common (applicationJSON, textPlain)
@@ -32,15 +39,14 @@ class IsBody a where
 
 instance isBodyUnit :: IsBody Unit where
   toBlob _ = Blob.fromString "" textPlain
-
-instance isBodyString :: IsBody String where
+else instance isBodyString :: IsBody String where
   toBlob = Blob.fromString ~$ textPlain
-
-instance isBodyJson :: IsBody Json where
+else instance isBodyJson :: IsBody Json where
   toBlob = Argonaut.stringify .> (Blob.fromString ~$ applicationJSON)
-
-instance isBodyBlob :: IsBody Blob where
+else instance isBodyBlob :: IsBody Blob where
   toBlob = identity
+else instance isBodyA :: EncodeJson a => IsBody a where
+  toBlob = toBlob <. encodeJson
 
 type RawResponse
   = { body :: Blob

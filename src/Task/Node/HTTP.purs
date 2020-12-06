@@ -13,7 +13,14 @@ module Task.Node.HTTP
   ) where
 
 import MasonPrelude
-import Data.Argonaut (class DecodeJson, Json, decodeJson, jsonParser)
+import Data.Argonaut
+  ( class DecodeJson
+  , class EncodeJson
+  , Json
+  , decodeJson
+  , encodeJson
+  , jsonParser
+  )
 import Data.Argonaut as Argonaut
 import Data.Map as Map
 import Data.Undefinable (Undefinable, toUndefinable)
@@ -51,18 +58,16 @@ class IsBody a where
 
 instance isBodyUnit :: IsBody Unit where
   toBuffer _ = B.create 0
-
-instance isBodyString :: IsBody String where
+else instance isBodyString :: IsBody String where
   toBuffer = B.fromString ~$ UTF8
-
-instance isBodyJson :: IsBody Json where
+else instance isBodyJson :: IsBody Json where
   toBuffer = Argonaut.stringify .> (B.fromString ~$ UTF8)
-
-instance isBodyArray :: IsBody (Array Int) where
+else instance isBodyArray :: IsBody (Array Int) where
   toBuffer = B.fromArray
-
-instance isBodyImmutableBuffer :: IsBody ImmutableBuffer where
+else instance isBodyImmutableBuffer :: IsBody ImmutableBuffer where
   toBuffer = identity
+else instance isBodyA :: EncodeJson a => IsBody a where
+  toBuffer = toBuffer <. encodeJson
 
 type RawResponse
   = { body :: Buffer
